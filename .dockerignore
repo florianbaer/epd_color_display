@@ -1,0 +1,15 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+*.md
+!prompt.md
+generated_images/*
+!generated_images/.gitkeep
+.env.example
+Dockerfile
+compose.yml
+Makefile
