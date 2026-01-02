@@ -5,12 +5,15 @@ FastAPI web application for managing prompts and generating EPD images.
 import os
 import logging
 import threading
+import atexit
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from core import generate_and_display_image
 
 app = FastAPI(title="E-Paper Display Image Generator")
@@ -94,6 +97,50 @@ def run_generation():
         update_task_status('error', f'Unexpected error: {str(e)}', error=str(e))
 
 
+def scheduled_generation():
+    """Run scheduled image generation at configured time."""
+    logger.info("Starting scheduled image generation...")
+
+    # Check if already running
+    with task_lock:
+        if current_task['status'] == 'running':
+            logger.warning("Generation already in progress, skipping scheduled run")
+            return
+
+    # Start generation in background thread
+    thread = threading.Thread(target=run_generation)
+    thread.daemon = True
+    thread.start()
+
+
+# Initialize scheduler
+scheduler = BackgroundScheduler()
+
+# Configure schedule from environment
+auto_generate = os.getenv('AUTO_GENERATE', 'true').lower() == 'true'
+schedule_time = os.getenv('SCHEDULE_TIME', '19:00')
+
+if auto_generate:
+    try:
+        hour, minute = schedule_time.split(':')
+        scheduler.add_job(
+            func=scheduled_generation,
+            trigger=CronTrigger(hour=int(hour), minute=int(minute)),
+            id='daily_generation',
+            name='Daily image generation',
+            replace_existing=True
+        )
+        scheduler.start()
+        logger.info(f"Scheduled daily generation at {schedule_time}")
+
+        # Shut down scheduler on exit
+        atexit.register(lambda: scheduler.shutdown())
+    except Exception as e:
+        logger.error(f"Failed to configure scheduler: {e}")
+else:
+    logger.info("Automatic generation disabled (AUTO_GENERATE=false)")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     """Main page."""
@@ -159,6 +206,20 @@ async def status():
         return current_task.copy()
 
 
+@app.get("/scheduler-status")
+async def scheduler_status():
+    """Get scheduler configuration and status."""
+    jobs = scheduler.get_jobs()
+    next_run = jobs[0].next_run_time.isoformat() if jobs else None
+
+    return {
+        "enabled": auto_generate,
+        "schedule_time": schedule_time,
+        "next_run": next_run,
+        "timezone": os.getenv('TZ', 'System default')
+    }
+
+
 if __name__ == '__main__':
     import uvicorn
 
@@ -169,10 +230,10 @@ if __name__ == '__main__':
 
     # Run FastAPI app with uvicorn
     logger.info("Starting FastAPI web server...")
-    logger.info("Access the app at http://localhost:5000")
+    logger.info("Access the app at http://localhost")
     uvicorn.run(
         app,
         host="0.0.0.0",  # Allow network access
-        port=5000,
+        port=80,
         log_level="info"
     )
