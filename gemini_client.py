@@ -49,19 +49,13 @@ class GeminiImageGenerator:
             raise ValueError("Prompt cannot be empty")
 
         logger.info(f"Generating image with prompt: {prompt}")
-        logger.info(f"Target resolution: {width}x{height} (5:4 aspect ratio)")
+        logger.info(f"Target display resolution: {width}x{height}")
 
         try:
-            # Use proper ImageConfig for aspect ratio and resolution
+            # Generate image (model will use its default aspect ratio and size)
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=[prompt],
-                config=types.GenerateContentConfig(
-                    image_config=types.ImageConfig(
-                        aspect_ratio="5:4",
-                        image_size="1K"
-                    ),
-                ),
             )
 
             # Extract image from response
