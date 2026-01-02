@@ -39,15 +39,17 @@ def main():
         prompt = os.getenv("IMAGE_PROMPT", "Generate a beautiful spring landscape with blooming flowers, green meadows, and blue sky")
         model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-image")
         image_dir = os.getenv("IMAGE_DIR", "generated_images")
+        width = int(os.getenv("EPD_WIDTH", "800"))
+        height = int(os.getenv("EPD_HEIGHT", "480"))
 
-        logger.info(f"Configuration loaded - Model: {model}")
+        logger.info(f"Configuration loaded - Model: {model}, Resolution: {width}x{height}")
 
         # Generate image via Gemini API
         logger.info("Initializing Gemini client...")
         generator = GeminiImageGenerator(api_key=api_key, model=model)
 
-        logger.info("Generating image (this may take 5-15 seconds)...")
-        raw_image = generator.generate_image(prompt)
+        logger.info(f"Generating image at {width}x{height} (this may take 5-15 seconds)...")
+        raw_image = generator.generate_image(prompt, width=width, height=height)
 
         # Save original image with timestamp
         saved_path = save_image_with_timestamp(raw_image, directory=image_dir)

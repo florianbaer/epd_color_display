@@ -28,12 +28,14 @@ class GeminiImageGenerator:
         self.client = genai.Client(api_key=api_key)
         logger.info(f"Initialized Gemini client with model: {model}")
 
-    def generate_image(self, prompt: str) -> Image.Image:
+    def generate_image(self, prompt: str, width: int = 800, height: int = 480) -> Image.Image:
         """
         Generate an image from a text prompt.
 
         Args:
             prompt: Text description of the image to generate
+            width: Desired image width (default: 800)
+            height: Desired image height (default: 480)
 
         Returns:
             PIL Image object
@@ -45,12 +47,14 @@ class GeminiImageGenerator:
         if not prompt:
             raise ValueError("Prompt cannot be empty")
 
-        logger.info(f"Generating image with prompt: {prompt}")
+        # Add dimensions to prompt for better control
+        full_prompt = f"{prompt}, resolution {width}x{height}, aspect ratio {width}:{height}"
+        logger.info(f"Generating image with prompt: {full_prompt}")
 
         try:
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=[prompt],
+                contents=[full_prompt],
             )
 
             # Extract image from response
