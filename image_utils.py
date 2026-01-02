@@ -35,28 +35,26 @@ def prepare_image_for_display(
 
     logger.info(f"Preparing image: {image.size[0]}x{image.size[1]} -> {target_width}x{target_height}")
 
-    # Step 1: Resize to target width while maintaining aspect ratio
-    aspect_ratio = image.height / image.width
-    new_height = int(target_width * aspect_ratio)
-    resized = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
-    logger.info(f"Resized to width {target_width}: {resized.width}x{resized.height}")
+    # Calculate scaling to ensure both dimensions are at least target size
+    scale_width = target_width / image.width
+    scale_height = target_height / image.height
+    # Use the larger scale to ensure we cover the entire target area
+    scale = max(scale_width, scale_height)
 
-    # Step 2: Crop to exact target dimensions (centered crop)
-    if resized.height > target_height:
-        # Crop height (center crop)
-        top = (resized.height - target_height) // 2
-        bottom = top + target_height
-        cropped = resized.crop((0, top, target_width, bottom))
-        logger.info(f"Cropped height from {resized.height} to {target_height} (removed {top} from top)")
-    elif resized.height < target_height:
-        # Pad height with background color
-        canvas = Image.new('RGB', (target_width, target_height), background_color)
-        y_offset = (target_height - resized.height) // 2
-        canvas.paste(resized, (0, y_offset))
-        cropped = canvas
-        logger.info(f"Padded height from {resized.height} to {target_height}")
-    else:
-        cropped = resized
+    # Step 1: Resize to ensure both dimensions are at least target size
+    new_width = int(image.width * scale)
+    new_height = int(image.height * scale)
+    resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    logger.info(f"Resized to: {resized.width}x{resized.height}")
+
+    # Step 2: Center crop to exact target dimensions
+    left = (resized.width - target_width) // 2
+    top = (resized.height - target_height) // 2
+    right = left + target_width
+    bottom = top + target_height
+
+    cropped = resized.crop((left, top, right, bottom))
+    logger.info(f"Cropped to: {cropped.width}x{cropped.height}")
 
     return cropped
 
