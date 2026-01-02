@@ -1,7 +1,7 @@
 """
 Gemini API client for generating images.
 """
-
+import io
 import logging
 from google import genai
 from PIL import Image
@@ -58,9 +58,18 @@ class GeminiImageGenerator:
                 if part.text is not None:
                     logger.debug(f"Response text: {part.text}")
                 elif part.inline_data is not None:
-                    image = part.as_image()
-                    logger.info(f"Image generated successfully: {image.size[0]}x{image.size[1]}")
-                    return image
+                    # Convert Gemini Image to PIL Image
+                    gemini_image = part.as_image()
+                    # Convert to PIL Image using _pil property or by converting to bytes
+                    if hasattr(gemini_image, '_pil'):
+                        pil_image = gemini_image._pil
+                    else:
+                        # Fallback: get the image data and convert
+                        image_bytes = part.inline_data.data
+                        pil_image = Image.open(io.BytesIO(image_bytes))
+
+                    logger.info(f"Image generated successfully: {pil_image.size[0]}x{pil_image.size[1]}")
+                    return pil_image
 
             raise ValueError("No image data found in API response")
 
