@@ -1,28 +1,23 @@
-FROM docker.io/python:3.13-slim 
+FROM docker.io/python:3.13-slim
 
 # Install system dependencies for GPIO/SPI
 RUN apt-get update && apt-get install -y \
     gcc \
     swig \
-    libgpiod3 \
+    libgpiod2 \
+    liblgpio-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy project files
-COPY . .
+# Copy pyproject.toml first for dependency installation
+COPY pyproject.toml .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir \
-    fastapi>=0.109.0 \
-    uvicorn>=0.27.0 \
-    google-genai>=0.2.0 \
-    pillow>=12.1.0 \
-    python-dotenv>=1.0.0 \
-    apscheduler>=3.10.0 \
-    gpiozero>=2.0.1 \
-    lgpio>=0.2.2.0 \
-    spidev>=3.8
+# Install Python dependencies from pyproject.toml
+RUN pip install --no-cache-dir .
+
+# Copy rest of project files
+COPY . .
 
 # Create directories
 RUN mkdir -p generated_images templates
