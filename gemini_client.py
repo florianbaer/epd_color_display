@@ -48,6 +48,8 @@ class GeminiImageGenerator:
         if not prompt:
             raise ValueError("Prompt cannot be empty")
 
+        prompt = f"{prompt} Make the main part of the image to be centered and only use about half the height of the image."
+
         logger.info(f"Generating image with prompt: {prompt}")
         logger.info(f"Target display resolution: {width}x{height}")
 
