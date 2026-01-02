@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "fastapi>=0.109.0",
     "google-genai>=0.2.0",
     "gpiozero>=2.0.1",
     "lgpio>=0.2.2.0",
@@ -12,4 +13,5 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "setuptools>=80.9.0",
     "spidev>=3.8",
+    "uvicorn>=0.27.0",
 ]

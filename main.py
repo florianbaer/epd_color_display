@@ -1,15 +1,16 @@
 """
 Main script to generate spring landscape images using Gemini API
 and display them on the Waveshare 7.3" e-paper display.
+
+CLI entry point that uses core.py for generation logic.
 """
 
 import os
 import sys
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
-from epd_color import EPD
-from gemini_client import GeminiImageGenerator
-from image_utils import save_image_with_timestamp, prepare_image_for_display
+from core import generate_and_display_image
 
 
 # Configure logging
@@ -21,76 +22,55 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Main orchestration function."""
-    epd = None
-
+    """Main CLI entry point."""
     try:
         # Load environment variables
         logger.info("Loading environment configuration...")
         load_dotenv()
 
-        # Get configuration
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key or api_key == "your_api_key_here":
-            logger.error("GEMINI_API_KEY not found or not set in .env file")
-            logger.error("Please edit .env and add your Gemini API key")
+        # Read prompt from prompt.md
+        prompt_file = Path(__file__).parent / 'prompt.md'
+        if not prompt_file.exists():
+            logger.error("prompt.md file not found")
+            logger.error("Please create prompt.md with your desired prompt")
             sys.exit(1)
 
-        prompt = os.getenv("IMAGE_PROMPT", "Generate a beautiful spring landscape with blooming flowers, green meadows, and blue sky")
-        model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-image")
-        image_dir = os.getenv("IMAGE_DIR", "generated_images")
-        width = int(os.getenv("EPD_WIDTH", "800"))
-        height = int(os.getenv("EPD_HEIGHT", "480"))
+        prompt = prompt_file.read_text(encoding='utf-8').strip()
+        if not prompt:
+            logger.error("prompt.md is empty")
+            logger.error("Please add a prompt to prompt.md")
+            sys.exit(1)
 
-        logger.info(f"Configuration loaded - Model: {model}, Resolution: {width}x{height}")
+        # Build configuration
+        config = {
+            'api_key': os.getenv("GEMINI_API_KEY"),
+            'model': os.getenv("GEMINI_MODEL", "gemini-2.5-flash-image"),
+            'width': int(os.getenv("EPD_WIDTH", "800")),
+            'height': int(os.getenv("EPD_HEIGHT", "480")),
+            'image_dir': os.getenv("IMAGE_DIR", "generated_images")
+        }
 
-        # Generate image via Gemini API
-        logger.info("Initializing Gemini client...")
-        generator = GeminiImageGenerator(api_key=api_key, model=model)
+        logger.info(f"Configuration loaded - Model: {config['model']}, Resolution: {config['width']}x{config['height']}")
+        logger.info(f"Prompt: {prompt[:80]}...")
 
-        logger.info(f"Generating image at {width}x{height} (this may take 5-15 seconds)...")
-        raw_image = generator.generate_image(prompt, width=width, height=height)
+        # Generate and display image using core logic
+        result = generate_and_display_image(prompt, config)
 
-        # Save original image with timestamp
-        saved_path = save_image_with_timestamp(raw_image, directory=image_dir)
-        logger.info(f"Original image saved to: {saved_path}")
-
-        # Prepare image for display (resize and center)
-        display_image = prepare_image_for_display(raw_image, 800, 480)
-
-        # Initialize EPD and display
-        logger.info("Initializing e-paper display...")
-        epd = EPD()
-        if epd.init() != 0:
-            raise RuntimeError("EPD initialization failed - check hardware connections")
-
-        logger.info("Converting image to EPD buffer...")
-        buffer = epd.getbuffer(display_image)
-
-        logger.info("Displaying image on EPD (this may take 15-30 seconds)...")
-        epd.display(buffer)
-
-        logger.info("Putting display to sleep...")
-        epd.sleep()
-
-        logger.info("✓ Image generated and displayed successfully!")
+        if result['success']:
+            logger.info(f"✓ {result['message']}")
+            sys.exit(0)
+        else:
+            logger.error(f"✗ {result['message']}")
+            if 'error' in result:
+                logger.error(f"Error details: {result['error']}")
+            sys.exit(1)
 
     except KeyboardInterrupt:
         logger.info("Operation cancelled by user")
-        if epd is not None:
-            try:
-                epd.sleep()
-            except:
-                pass
         sys.exit(0)
 
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
-        if epd is not None:
-            try:
-                epd.sleep()
-            except:
-                pass
         sys.exit(1)
 
 
