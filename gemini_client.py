@@ -4,6 +4,7 @@ Gemini API client for generating images.
 import io
 import logging
 from google import genai
+from google.genai import types
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -47,14 +48,20 @@ class GeminiImageGenerator:
         if not prompt:
             raise ValueError("Prompt cannot be empty")
 
-        # Add dimensions to prompt for better control
-        full_prompt = f"{prompt}, resolution {width}x{height}, aspect ratio {width}:{height}"
-        logger.info(f"Generating image with prompt: {full_prompt}")
+        logger.info(f"Generating image with prompt: {prompt}")
+        logger.info(f"Target resolution: {width}x{height} (5:3 aspect ratio)")
 
         try:
+            # Use proper ImageConfig for aspect ratio and resolution
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=[full_prompt],
+                contents=[prompt],
+                config=types.GenerateContentConfig(
+                    image_config=types.ImageConfig(
+                        aspect_ratio="5:3",
+                        image_size="1K"
+                    ),
+                ),
             )
 
             # Extract image from response

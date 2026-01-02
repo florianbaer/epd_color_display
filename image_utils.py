@@ -17,16 +17,16 @@ def prepare_image_for_display(
     background_color: tuple = (255, 255, 255)
 ) -> Image.Image:
     """
-    Resize and center image for EPD display.
+    Resize image to target width and crop to exact dimensions.
 
     Args:
         image: Input PIL Image
         target_width: Target display width (default: 800)
         target_height: Target display height (default: 480)
-        background_color: RGB background color (default: white)
+        background_color: RGB background color (not used in crop mode)
 
     Returns:
-        PIL Image resized and centered on target canvas
+        PIL Image resized to target width and cropped to exact dimensions
     """
     # If image is already the correct size, return as-is
     if image.size == (target_width, target_height):
@@ -35,32 +35,30 @@ def prepare_image_for_display(
 
     logger.info(f"Preparing image: {image.size[0]}x{image.size[1]} -> {target_width}x{target_height}")
 
-    # Calculate aspect ratios
-    img_ratio = image.width / image.height
-    display_ratio = target_width / target_height
+    # Step 1: Resize to target width while maintaining aspect ratio
+    aspect_ratio = image.height / image.width
+    new_height = int(target_width * aspect_ratio)
+    resized = image.resize((target_width, new_height), Image.Resampling.LANCZOS)
+    logger.info(f"Resized to width {target_width}: {resized.width}x{resized.height}")
 
-    # Determine new size while preserving aspect ratio
-    if img_ratio > display_ratio:
-        # Image is wider - fit to width
-        new_width = target_width
-        new_height = int(target_width / img_ratio)
+    # Step 2: Crop to exact target dimensions (centered crop)
+    if resized.height > target_height:
+        # Crop height (center crop)
+        top = (resized.height - target_height) // 2
+        bottom = top + target_height
+        cropped = resized.crop((0, top, target_width, bottom))
+        logger.info(f"Cropped height from {resized.height} to {target_height} (removed {top} from top)")
+    elif resized.height < target_height:
+        # Pad height with background color
+        canvas = Image.new('RGB', (target_width, target_height), background_color)
+        y_offset = (target_height - resized.height) // 2
+        canvas.paste(resized, (0, y_offset))
+        cropped = canvas
+        logger.info(f"Padded height from {resized.height} to {target_height}")
     else:
-        # Image is taller - fit to height
-        new_height = target_height
-        new_width = int(target_height * img_ratio)
+        cropped = resized
 
-    # Resize image with high-quality resampling
-    resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    logger.info(f"Resized to: {new_width}x{new_height}")
-
-    # Create canvas and center image
-    canvas = Image.new('RGB', (target_width, target_height), background_color)
-    x_offset = (target_width - new_width) // 2
-    y_offset = (target_height - new_height) // 2
-    canvas.paste(resized, (x_offset, y_offset))
-
-    logger.info(f"Centered on canvas with offset: ({x_offset}, {y_offset})")
-    return canvas
+    return cropped
 
 
 def save_image_with_timestamp(
