@@ -1,10 +1,10 @@
-FROM python:3.13-slim
+FROM docker.io/python:3.13-slim 
 
 # Install system dependencies for GPIO/SPI
 RUN apt-get update && apt-get install -y \
     gcc \
     swig \
-    libgpiod2 \
+    libgpiod3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

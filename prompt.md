@@ -1,1 +1,1 @@
-Generate a beautiful spring landscape with blooming flowers, green meadows, and blue sky
+Modern flat vector illustration of a surfing stegosaurus with sunglasses. Minimalist geometric shapes, vibrant green meadows, blooming wildflower patches, and Alpine peaks under a clear blue sky. Clean lines, solid matte colors, 2D aesthetic.

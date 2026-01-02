@@ -5,12 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-<<<<<<< HEAD
-    "apscheduler>=3.10.0",
-    "fastapi>=0.109.0",
-=======
+    "apscheduler>=3.11.2",
     "fastapi>=0.128.0",
->>>>>>> 43dd0e9a73a627bec587749a08f8766fd9e3d56d
     "google-genai>=0.2.0",
     "gpiozero>=2.0.1",
     "lgpio>=0.2.2.0",
