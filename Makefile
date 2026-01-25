@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart logs status clean prune dev
+.PHONY: help build run stop restart logs status clean prune dev run-local
 
 # Default target
 help:
@@ -18,6 +18,9 @@ help:
 	@echo "  make dev       - Start development environment (hot reload)"
 	@echo "  make dev-stop  - Stop development environment"
 	@echo "  make dev-logs  - View development logs"
+	@echo ""
+	@echo "Local (no container) targets:"
+	@echo "  make run-local - Run backend and frontend locally (no containers)"
 	@echo ""
 	@echo "Service targets:"
 	@echo "  make shell-backend  - Shell into backend container"
@@ -99,3 +102,13 @@ shell-backend:
 shell-frontend:
 	@echo "Opening shell in frontend container..."
 	podman exec -it epd-frontend /bin/sh
+
+# Local (no container) targets
+run-local:
+	@echo "Starting backend and frontend locally..."
+	@echo "Backend: http://localhost:8000"
+	@echo "Frontend: http://localhost:5173"
+	@echo "Press Ctrl+C to stop both"
+	@cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
+	cd frontend && npm run dev; \
+	kill %1 2>/dev/null || true
