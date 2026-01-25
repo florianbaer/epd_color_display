@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart logs status clean prune dev run-local install
+.PHONY: help build run stop restart logs status clean prune dev run-local run-local-nohup run-local-stop install
 
 # Default target
 help:
@@ -20,8 +20,10 @@ help:
 	@echo "  make dev-logs  - View development logs"
 	@echo ""
 	@echo "Local (no container) targets:"
-	@echo "  make install   - Install dependencies (frontend + backend)"
-	@echo "  make run-local - Run locally (no containers)"
+	@echo "  make install         - Install dependencies (frontend + backend)"
+	@echo "  make run-local       - Run locally (no containers)"
+	@echo "  make run-local-nohup - Run locally in background (survives SSH logout)"
+	@echo "  make run-local-stop  - Stop background local process"
 	@echo ""
 	@echo "Service targets:"
 	@echo "  make shell     - Shell into container"
@@ -113,3 +115,22 @@ run-local: install
 	@echo "Starting backend (serving frontend)..."
 	@echo "Access at http://localhost:8000"
 	@cd backend && GPIOZERO_PIN_FACTORY=lgpio uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Run locally with nohup (survives SSH logout)
+run-local-nohup: install
+	@echo "Building frontend..."
+	@cd frontend && bun run build
+	@echo "Starting backend in background..."
+	@cd backend && nohup sh -c 'GPIOZERO_PIN_FACTORY=lgpio uv run uvicorn app.main:app --host 0.0.0.0 --port 8000' > ../nohup.out 2>&1 & echo $$! > ../epd.pid
+	@echo "Done! PID saved to epd.pid, logs in nohup.out"
+	@echo "Access at http://localhost:8000"
+	@echo "Stop with: make run-local-stop"
+
+# Stop background local process
+run-local-stop:
+	@if [ -f epd.pid ]; then \
+		kill $$(cat epd.pid) 2>/dev/null && echo "Stopped process $$(cat epd.pid)" || echo "Process not running"; \
+		rm -f epd.pid; \
+	else \
+		echo "No PID file found. Try: pkill -f 'uvicorn app.main:app'"; \
+	fi

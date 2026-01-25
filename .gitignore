@@ -18,3 +18,7 @@ generated_images/
 *.jpg
 frontend/node_modules/*
 nul
+
+# Nohup files
+nohup.out
+epd.pid
