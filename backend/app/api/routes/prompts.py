@@ -59,7 +59,7 @@ async def update_current_prompt(request: PromptRequest):
         logger.info(f"Prompt saved: {prompt[:50]}...")
 
         # Broadcast to all connected WebSocket clients
-        await manager.broadcast({'type': 'prompt_updated', 'prompt': prompt})
+        await manager.broadcast({'type': 'prompt_update', 'prompt': prompt})
 
         return SuccessResponse(success=True, message="Prompt saved successfully")
 
