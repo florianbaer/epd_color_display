@@ -10,6 +10,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from .config import get_settings
 from .api.routes import prompts, generate, system
@@ -93,6 +95,34 @@ api_prefix = "/api/v1"
 app.include_router(prompts.router, prefix=api_prefix)
 app.include_router(generate.router, prefix=api_prefix)
 app.include_router(system.router, prefix=api_prefix)
+
+
+# Serve frontend static files if the build exists
+# Check multiple possible locations (local dev vs Docker)
+frontend_dist = None
+for candidate in [
+    Path(__file__).parent.parent.parent / "frontend" / "dist",  # Local: backend/../frontend/dist
+    Path("/app/frontend/dist"),  # Docker
+]:
+    if candidate.exists():
+        frontend_dist = candidate
+        break
+
+if frontend_dist:
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+
+    @app.get("/")
+    async def serve_frontend():
+        """Serve the frontend index.html."""
+        return FileResponse(frontend_dist / "index.html")
+
+    @app.get("/{path:path}")
+    async def serve_frontend_fallback(path: str):
+        """Fallback to index.html for SPA routing (only for non-API routes)."""
+        file_path = frontend_dist / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")
 
 
 @app.websocket(f"{api_prefix}/ws")

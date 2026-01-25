@@ -1,10 +1,12 @@
 # Production docker-compose for EPD Color Display
-# Runs both backend and frontend services
+# Single container with backend serving frontend
 
 services:
-  backend:
-    build: ./backend
-    container_name: epd-backend
+  app:
+    build: .
+    container_name: epd-app
+    ports:
+      - "80:8000"
     volumes:
       - ./prompt.md:/app/prompt.md
       - ./prompt_history.csv:/app/prompt_history.csv
@@ -20,20 +22,3 @@ services:
       - AUTO_GENERATE=${AUTO_GENERATE:-true}
     restart: unless-stopped
     privileged: true
-    networks:
-      - epd-network
-
-  frontend:
-    build: ./frontend
-    container_name: epd-frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - epd-network
-
-networks:
-  epd-network:
-    driver: bridge

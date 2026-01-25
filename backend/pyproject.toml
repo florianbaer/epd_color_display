@@ -2,7 +2,6 @@
 name = "epd-color-display-backend"
 version = "1.0.0"
 description = "FastAPI backend for E-Paper Display Image Generator"
-readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.109.0",

@@ -1,4 +1,15 @@
-# Backend Dockerfile for EPD Color Display
+# Dockerfile for EPD Color Display
+# Single container with backend serving built frontend
+
+# Build frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app
+COPY frontend/package.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
+
+# Backend
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -10,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY pyproject.toml .
+COPY backend/pyproject.toml .
 
 # Install dependencies
 RUN pip install --no-cache-dir .
@@ -19,7 +30,10 @@ RUN pip install --no-cache-dir .
 RUN pip install --no-cache-dir gpiozero lgpio spidev || true
 
 # Copy application code
-COPY app/ ./app/
+COPY backend/app/ ./app/
+
+# Copy frontend build
+COPY --from=frontend-build /app/dist ./frontend/dist
 
 # Create directories for data persistence
 RUN mkdir -p /app/generated_images

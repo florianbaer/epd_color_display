@@ -2,17 +2,17 @@
 
 # Default target
 help:
-	@echo "EPD Display Container Management"
+	@echo "EPD Display Management"
 	@echo ""
 	@echo "Production targets:"
-	@echo "  make build     - Build all container images"
-	@echo "  make run       - Start production containers"
-	@echo "  make stop      - Stop all containers"
-	@echo "  make restart   - Restart all containers"
+	@echo "  make build     - Build container image"
+	@echo "  make run       - Start production container"
+	@echo "  make stop      - Stop container"
+	@echo "  make restart   - Restart container"
 	@echo "  make logs      - View container logs (follow mode)"
 	@echo "  make status    - Show container status"
-	@echo "  make clean     - Stop and remove all containers"
-	@echo "  make prune     - Remove containers and images"
+	@echo "  make clean     - Stop and remove container"
+	@echo "  make prune     - Remove container and image"
 	@echo ""
 	@echo "Development targets:"
 	@echo "  make dev       - Start development environment (hot reload)"
@@ -20,33 +20,32 @@ help:
 	@echo "  make dev-logs  - View development logs"
 	@echo ""
 	@echo "Local (no container) targets:"
-	@echo "  make run-local - Run backend and frontend locally (no containers)"
+	@echo "  make run-local - Run locally (no containers)"
 	@echo ""
 	@echo "Service targets:"
-	@echo "  make shell-backend  - Shell into backend container"
-	@echo "  make shell-frontend - Shell into frontend container"
+	@echo "  make shell     - Shell into container"
 	@echo ""
 
-# Build all container images
+# Build container image
 build:
-	@echo "Building EPD Display container images..."
+	@echo "Building EPD Display container image..."
 	podman-compose build
 	@echo "Done!"
 
-# Start production containers
+# Start production container
 run:
-	@echo "Starting EPD Display containers..."
+	@echo "Starting EPD Display container..."
 	podman-compose up -d
 	@echo "Done!"
 	@echo "Access the web interface at http://localhost"
 
-# Stop all containers
+# Stop container
 stop:
-	@echo "Stopping EPD Display containers..."
+	@echo "Stopping EPD Display container..."
 	podman-compose down
 	@echo "Done!"
 
-# Restart containers
+# Restart container
 restart: stop run
 
 # View container logs
@@ -60,21 +59,21 @@ status:
 	@podman ps -a --filter name=epd
 	@echo ""
 	@echo "API Health:"
-	@curl -s http://localhost/api/v1/health 2>/dev/null | jq . || echo "Backend not accessible"
+	@curl -s http://localhost/api/v1/health 2>/dev/null | jq . || echo "Not accessible"
 	@echo ""
 	@echo "Scheduler status:"
-	@curl -s http://localhost/api/v1/scheduler 2>/dev/null | jq . || echo "Backend not accessible"
+	@curl -s http://localhost/api/v1/scheduler 2>/dev/null | jq . || echo "Not accessible"
 
-# Clean up containers
+# Clean up container
 clean: stop
-	@echo "Removing containers..."
-	podman rm -f epd-backend epd-frontend 2>/dev/null || true
+	@echo "Removing container..."
+	podman rm -f epd-app 2>/dev/null || true
 	@echo "Done!"
 
-# Remove containers and images
+# Remove container and image
 prune: clean
-	@echo "Removing container images..."
-	podman rmi epd-color-display-backend:latest epd-color-display-frontend:latest 2>/dev/null || true
+	@echo "Removing container image..."
+	podman rmi epd_color_display-app:latest 2>/dev/null || true
 	@echo "Done!"
 
 # Development targets
@@ -94,21 +93,15 @@ dev-logs:
 	@echo "Showing development logs (Ctrl+C to exit)..."
 	podman-compose -f docker-compose.dev.yml logs -f
 
-# Shell targets
-shell-backend:
-	@echo "Opening shell in backend container..."
-	podman exec -it epd-backend /bin/bash
-
-shell-frontend:
-	@echo "Opening shell in frontend container..."
-	podman exec -it epd-frontend /bin/sh
+# Shell target
+shell:
+	@echo "Opening shell in container..."
+	podman exec -it epd-app /bin/bash
 
 # Local (no container) targets
 run-local:
-	@echo "Starting backend and frontend locally..."
-	@echo "Backend: http://localhost:8000"
-	@echo "Frontend: http://localhost:5173"
-	@echo "Press Ctrl+C to stop both"
-	@cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
-	cd frontend && bun run dev; \
-	kill %1 2>/dev/null || true
+	@echo "Building frontend..."
+	@cd frontend && bun install && bun run build
+	@echo "Starting backend (serving frontend)..."
+	@echo "Access at http://localhost:8000"
+	@cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
