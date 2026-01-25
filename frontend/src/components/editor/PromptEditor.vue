@@ -21,9 +21,9 @@ watch(() => props.modelValue, (newVal) => {
 const charCount = computed(() => localValue.value.length)
 
 const charCountClass = computed(() => {
-  if (charCount.value >= maxLen) return 'error'
-  if (charCount.value >= maxLen * 0.9) return 'warning'
-  return ''
+  if (charCount.value >= maxLen) return 'text-error'
+  if (charCount.value >= maxLen * 0.9) return 'text-warning'
+  return 'text-gray-400'
 })
 
 function handleInput(event: Event) {
@@ -46,13 +46,14 @@ function handleSave() {
       rows="6"
       placeholder="Enter your image generation prompt..."
       :maxlength="maxLength"
+      class="w-full p-3 border-2 border-gray-200 rounded-lg font-sans text-sm resize-y transition-colors duration-200 focus:outline-none focus:border-primary"
       @input="handleInput"
     />
-    <div class="char-count" :class="charCountClass">
+    <div class="text-right text-xs mt-1" :class="charCountClass">
       {{ charCount }} / {{ maxLen }}
     </div>
-    <div class="button-group">
-      <button class="btn-success" @click="handleSave">
+    <div class="mt-4 flex gap-3 items-center">
+      <button class="btn btn-success" @click="handleSave">
         Save Prompt
       </button>
       <slot name="feedback" />

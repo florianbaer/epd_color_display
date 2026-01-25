@@ -2,6 +2,7 @@
 
 import logging
 from typing import Dict, Any, Callable, Optional
+from PIL import Image
 from ..hardware.epd import EPD
 from .gemini import GeminiImageGenerator
 from ..utils.image import save_image_with_timestamp, prepare_image_for_display, log_prompt_to_csv
@@ -96,6 +97,89 @@ def generate_and_display_image(
     except Exception as e:
         error_msg = f"{type(e).__name__}: {str(e)}"
         logger.error(f"Generation failed: {error_msg}", exc_info=True)
+
+        # Always try to cleanup EPD
+        if epd is not None:
+            try:
+                epd.sleep()
+            except Exception as cleanup_error:
+                logger.error(f"EPD cleanup failed: {cleanup_error}")
+
+        return {
+            'success': False,
+            'error': str(e),
+            'message': f'Failed: {error_msg}'
+        }
+
+
+def display_existing_image(
+    image_path: str,
+    config: Dict[str, Any],
+    status_callback: Optional[Callable[[str], None]] = None
+) -> Dict[str, Any]:
+    """
+    Display an existing image on the EPD.
+
+    Args:
+        image_path: Path to the image file to display
+        config: Configuration dict with:
+            - width: Target width (default: 800)
+            - height: Target height (default: 480)
+        status_callback: Optional function(message) for progress updates
+
+    Returns:
+        Dict with:
+            - success: bool
+            - message: str
+            - error: str (if failed)
+    """
+    epd = None
+
+    def update_status(msg: str):
+        """Helper to update status via callback and logger."""
+        logger.info(msg)
+        if status_callback:
+            status_callback(msg)
+
+    try:
+        # Validate image path exists
+        import os
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+
+        # Get configuration with defaults
+        width = config.get('width', 800)
+        height = config.get('height', 480)
+
+        update_status("Loading image from disk...")
+        raw_image = Image.open(image_path)
+
+        update_status("Preparing image for display...")
+        display_image = prepare_image_for_display(raw_image, width, height)
+
+        update_status("Initializing e-paper display...")
+        epd = EPD()
+        if epd.init() != 0:
+            raise RuntimeError("EPD initialization failed - check hardware connections")
+
+        update_status("Converting image to EPD buffer...")
+        buffer = epd.getbuffer(display_image)
+
+        update_status("Displaying image on EPD (this may take 15-30 seconds)...")
+        epd.display(buffer)
+
+        update_status("Putting display to sleep...")
+        epd.sleep()
+
+        return {
+            'success': True,
+            'message': 'Image displayed successfully!',
+            'image_path': image_path
+        }
+
+    except Exception as e:
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        logger.error(f"Display failed: {error_msg}", exc_info=True)
 
         # Always try to cleanup EPD
         if epd is not None:

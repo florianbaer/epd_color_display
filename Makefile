@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart logs status clean prune dev run-local
+.PHONY: help build run stop restart logs status clean prune dev run-local install
 
 # Default target
 help:
@@ -20,6 +20,7 @@ help:
 	@echo "  make dev-logs  - View development logs"
 	@echo ""
 	@echo "Local (no container) targets:"
+	@echo "  make install   - Install dependencies (frontend + backend)"
 	@echo "  make run-local - Run locally (no containers)"
 	@echo ""
 	@echo "Service targets:"
@@ -99,9 +100,16 @@ shell:
 	podman exec -it epd-app /bin/bash
 
 # Local (no container) targets
-run-local:
+install:
+	@echo "Installing frontend dependencies..."
+	@cd frontend && bun install
+	@echo "Installing backend dependencies..."
+	@cd backend && uv sync
+	@echo "Done!"
+
+run-local: install
 	@echo "Building frontend..."
-	@cd frontend && bun install && bun run build
+	@cd frontend && bun run build
 	@echo "Starting backend (serving frontend)..."
 	@echo "Access at http://localhost:8000"
-	@cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	@cd backend && GPIOZERO_PIN_FACTORY=lgpio uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

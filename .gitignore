@@ -16,3 +16,4 @@ wheels/
 generated_images/
 *.png
 *.jpg
+frontend/node_modules/*
