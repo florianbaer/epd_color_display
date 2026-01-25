@@ -109,6 +109,6 @@ run-local:
 	@echo "Backend: http://localhost:8000"
 	@echo "Frontend: http://localhost:5173"
 	@echo "Press Ctrl+C to stop both"
-	@cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
-	cd frontend && npm run dev; \
+	@cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
+	cd frontend && bun run dev; \
 	kill %1 2>/dev/null || true
