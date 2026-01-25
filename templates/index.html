@@ -195,12 +195,59 @@
             font-size: 13px;
             color: #6b7280;
         }
+
+        .prompt-history {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .prompt-history-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .prompt-history-item:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+        }
+
+        .prompt-history-item .timestamp {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+
+        .prompt-history-item .prompt-text {
+            font-size: 14px;
+            color: #374151;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ws-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+            background: #ef4444;
+        }
+
+        .ws-indicator.connected {
+            background: #10b981;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>E-Paper Display Image Generator</h1>
+            <h1>E-Paper Display Image Generator <span id="ws-indicator" class="ws-indicator"></span></h1>
             <div class="subtitle">Powered by Gemini AI</div>
         </header>
 
@@ -211,6 +258,11 @@
                 <button class="btn-success" onclick="savePrompt()">Save Prompt</button>
                 <span id="save-feedback" class="feedback"></span>
             </div>
+        </section>
+
+        <section>
+            <h2>Recent Prompts</h2>
+            <div id="prompt-history" class="prompt-history"></div>
         </section>
 
         <section>
@@ -228,6 +280,8 @@
     </div>
 
     <script>
+        let ws = null;
+
         // Save prompt
         async function savePrompt() {
             const prompt = document.getElementById('prompt').value.trim();
@@ -251,6 +305,7 @@
                 if (response.ok) {
                     feedback.textContent = '✓ Saved!';
                     feedback.className = 'feedback success show';
+                    loadPromptHistory();
                 } else {
                     feedback.textContent = '✗ ' + (data.error || 'Failed to save');
                     feedback.className = 'feedback error show';
@@ -333,8 +388,78 @@
             }
         }
 
-        // Auto-focus on prompt textarea
-        document.getElementById('prompt').focus();
+        // Prompt history functions
+        async function loadPromptHistory() {
+            const response = await fetch('/prompt-history');
+            const data = await response.json();
+            renderPromptHistory(data.prompts);
+        }
+
+        function renderPromptHistory(prompts) {
+            const container = document.getElementById('prompt-history');
+            if (prompts.length === 0) {
+                container.innerHTML = '<div class="info-box">No prompt history yet.</div>';
+                return;
+            }
+            container.innerHTML = prompts.map(p => `
+                <div class="prompt-history-item" onclick="usePrompt(this)" data-prompt="${escapeAttr(p.prompt)}">
+                    <div class="timestamp">${escapeHtml(p.timestamp)}</div>
+                    <div class="prompt-text">${escapeHtml(p.prompt)}</div>
+                </div>
+            `).join('');
+        }
+
+        function usePrompt(el) {
+            document.getElementById('prompt').value = el.dataset.prompt;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeAttr(text) {
+            return text.replace(/"/g, '&quot;');
+        }
+
+        // WebSocket functions
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onopen = () => {
+                document.getElementById('ws-indicator').classList.add('connected');
+            };
+
+            ws.onclose = () => {
+                document.getElementById('ws-indicator').classList.remove('connected');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'prompt_updated') {
+                    document.getElementById('prompt').value = data.prompt;
+                    showNotification('Prompt updated by another user');
+                    loadPromptHistory();
+                }
+            };
+        }
+
+        function showNotification(msg) {
+            const feedback = document.getElementById('save-feedback');
+            feedback.textContent = msg;
+            feedback.className = 'feedback success show';
+            setTimeout(() => feedback.classList.remove('show'), 3000);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPromptHistory();
+            connectWebSocket();
+            document.getElementById('prompt').focus();
+        });
     </script>
 </body>
 </html>

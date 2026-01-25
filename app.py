@@ -7,10 +7,12 @@ import logging
 import threading
 import atexit
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List
+import csv
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -29,6 +31,28 @@ current_task = {
 }
 task_lock = threading.Lock()
 
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                pass
+
+manager = ConnectionManager()
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +60,7 @@ logging.basicConfig(
 )
 
 PROMPT_FILE = Path(__file__).parent / 'prompt.md'
+PROMPT_HISTORY_FILE = Path(__file__).parent / 'prompt_history.csv'
 
 
 # Pydantic models
@@ -177,6 +202,9 @@ async def save_prompt(request: PromptRequest):
         log_prompt_to_csv(prompt)
         logger.info(f"Prompt saved: {prompt[:50]}...")
 
+        # Broadcast to all connected WebSocket clients
+        await manager.broadcast({'type': 'prompt_updated', 'prompt': prompt})
+
         return {"success": True, "message": "Prompt saved successfully"}
 
     except HTTPException:
@@ -184,6 +212,29 @@ async def save_prompt(request: PromptRequest):
     except Exception as e:
         logger.error(f"Failed to save prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/prompt-history")
+async def get_prompt_history(limit: int = 3):
+    """Get the last N prompts from history."""
+    prompts = []
+    if PROMPT_HISTORY_FILE.exists():
+        with open(PROMPT_HISTORY_FILE, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            for row in reversed(rows[-limit:]):
+                prompts.append({'timestamp': row['timestamp'], 'prompt': row['prompt']})
+    return {"prompts": prompts}
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 @app.post("/generate")
