@@ -7,6 +7,8 @@ from pathlib import Path
 from PIL import Image
 import logging
 
+from ..config import get_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -129,8 +131,7 @@ def log_prompt_to_csv(
         Path to the CSV file
     """
     if csv_path is None:
-        csv_path = os.getenv('PROMPT_HISTORY_FILE',
-                            str(Path(__file__).parent.parent.parent.parent / 'prompt_history.csv'))
+        csv_path = str(get_settings().prompt_history_path)
 
     file_exists = os.path.exists(csv_path)
 
