@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Any, Callable, Optional
 from epd_color import EPD
 from gemini_client import GeminiImageGenerator
-from image_utils import save_image_with_timestamp, prepare_image_for_display
+from image_utils import save_image_with_timestamp, prepare_image_for_display, log_prompt_to_csv
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,9 @@ def generate_and_display_image(
         width = config.get('width', 800)
         height = config.get('height', 480)
         image_dir = config.get('image_dir', 'generated_images')
+
+        # Log prompt to history
+        log_prompt_to_csv(prompt)
 
         update_status("Initializing Gemini client...")
         generator = GeminiImageGenerator(api_key=api_key, model=model)

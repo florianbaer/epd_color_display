@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from core import generate_and_display_image
+from image_utils import log_prompt_to_csv
 
 app = FastAPI(title="E-Paper Display Image Generator")
 load_dotenv()
@@ -173,6 +174,7 @@ async def save_prompt(request: PromptRequest):
             raise HTTPException(status_code=400, detail="Prompt too long (max 1000 characters)")
 
         write_prompt(prompt)
+        log_prompt_to_csv(prompt)
         logger.info(f"Prompt saved: {prompt[:50]}...")
 
         return {"success": True, "message": "Prompt saved successfully"}

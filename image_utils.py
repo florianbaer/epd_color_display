@@ -3,7 +3,9 @@ Image processing utilities for EPD display.
 """
 
 import os
+import csv
 from datetime import datetime
+from pathlib import Path
 from PIL import Image
 import logging
 
@@ -89,3 +91,62 @@ def save_image_with_timestamp(
 
     logger.info(f"Saved image to: {abs_path}")
     return abs_path
+
+
+def get_last_prompt_from_csv(csv_path: str) -> str | None:
+    """
+    Get the last prompt from a CSV history file.
+
+    Args:
+        csv_path: Path to the CSV file
+
+    Returns:
+        The last prompt string, or None if file doesn't exist or is empty
+    """
+    if not os.path.exists(csv_path):
+        return None
+
+    with open(csv_path, 'r', newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+        if len(rows) > 1 and len(rows[-1]) > 1:  # Has header + at least one entry
+            return rows[-1][1]
+    return None
+
+
+def log_prompt_to_csv(
+    prompt: str,
+    csv_path: str = None
+) -> str:
+    """
+    Append prompt with timestamp to CSV history file.
+
+    Skips writing if the prompt is identical to the previous entry.
+
+    Args:
+        prompt: The prompt text to log
+        csv_path: Path to CSV file (default: prompt_history.csv in project root)
+
+    Returns:
+        Path to the CSV file
+    """
+    if csv_path is None:
+        csv_path = os.getenv('PROMPT_HISTORY_FILE',
+                            str(Path(__file__).parent / 'prompt_history.csv'))
+
+    file_exists = os.path.exists(csv_path)
+
+    if get_last_prompt_from_csv(csv_path) == prompt:
+        logger.debug(f"Skipping duplicate prompt in CSV")
+        return csv_path
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(['timestamp', 'prompt'])
+        writer.writerow([timestamp, prompt])
+
+    logger.info(f"Logged prompt to: {csv_path}")
+    return csv_path
