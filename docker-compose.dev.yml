@@ -1,0 +1,41 @@
+# Development docker-compose for EPD Color Display
+# Exposes both services with hot reload
+
+services:
+  backend:
+    build: ./backend
+    container_name: epd-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./prompt.md:/app/prompt.md
+      - ./prompt_history.csv:/app/prompt_history.csv
+      - ./generated_images:/app/generated_images
+      - ./.env:/app/.env
+    environment:
+      - TZ=${TZ:-Europe/Zurich}
+      - SCHEDULE_TIME=${SCHEDULE_TIME:-19:00}
+      - AUTO_GENERATE=${AUTO_GENERATE:-false}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - epd-network-dev
+
+  frontend:
+    image: node:20-alpine
+    container_name: epd-frontend-dev
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - backend
+    networks:
+      - epd-network-dev
+
+networks:
+  epd-network-dev:
+    driver: bridge
