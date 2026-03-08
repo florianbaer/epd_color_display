@@ -1,22 +1,24 @@
+# syntax=docker/dockerfile:1
 # Frontend Dockerfile for EPD Color Display
 # Multi-stage build: build stage + nginx serve stage
 
 # Build stage
-FROM node:20-alpine AS build
+FROM oven/bun:1-alpine AS build
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./
+COPY package.json bun.lock* ./
 
 # Install dependencies
-RUN npm install
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build for production
-RUN npm run build
+RUN bun run build
 
 # Production stage
 FROM nginx:alpine
