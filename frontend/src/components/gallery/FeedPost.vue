@@ -2,7 +2,7 @@
 import type { FeedGroup, ImageInfo } from '../../types'
 import { useImageStore } from '../../stores/imageStore'
 
-const props = defineProps<{
+defineProps<{
   group: FeedGroup
 }>()
 
