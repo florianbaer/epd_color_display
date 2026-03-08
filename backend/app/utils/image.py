@@ -2,8 +2,10 @@
 
 import os
 import csv
+import json
 from datetime import datetime
 from pathlib import Path
+from collections import defaultdict
 from PIL import Image
 import logging
 
@@ -149,6 +151,87 @@ def log_prompt_to_csv(
 
     logger.info(f"Logged prompt to: {csv_path}")
     return csv_path
+
+
+def save_image_metadata(image_path: str, prompt: str, model: str = "") -> str:
+    """
+    Write a JSON sidecar file alongside an image with generation metadata.
+
+    Returns:
+        Path to the written JSON file.
+    """
+    json_path = os.path.splitext(image_path)[0] + ".json"
+    metadata = {
+        "prompt": prompt,
+        "generated_at": datetime.now().isoformat(),
+        "model": model,
+    }
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    logger.info(f"Saved image metadata to: {json_path}")
+    return json_path
+
+
+def read_image_metadata(image_path: str) -> dict | None:
+    """Read the JSON sidecar for an image, returning None if it doesn't exist."""
+    json_path = os.path.splitext(image_path)[0] + ".json"
+    if not os.path.exists(json_path):
+        return None
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        logger.warning(f"Failed to read metadata: {json_path}")
+        return None
+
+
+def get_images_grouped_by_prompt(directory: str, limit: int = 100) -> list[dict]:
+    """
+    Scan PNGs, read sidecars, group by prompt text.
+
+    Returns list of groups sorted newest-first:
+        [{"prompt": str, "generated_at": str, "images": [dict, ...]}]
+    """
+    dir_path = Path(directory)
+    if not dir_path.exists():
+        return []
+
+    png_files = list(dir_path.glob("*.png"))
+    png_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    png_files = png_files[:limit]
+
+    groups: dict[str, list[dict]] = defaultdict(list)
+    group_timestamps: dict[str, str] = {}
+
+    for img_path in png_files:
+        stat = img_path.stat()
+        meta = read_image_metadata(str(img_path))
+        prompt = meta["prompt"] if meta and meta.get("prompt") else ""
+        generated_at = meta.get("generated_at", "") if meta else ""
+
+        img_info = {
+            "filename": img_path.name,
+            "path": str(img_path.absolute()),
+            "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            "size_bytes": stat.st_size,
+        }
+        groups[prompt].append(img_info)
+
+        # Track newest timestamp per group
+        ts = generated_at or img_info["created_at"]
+        if prompt not in group_timestamps or ts > group_timestamps[prompt]:
+            group_timestamps[prompt] = ts
+
+    # Build result sorted newest-first
+    result = []
+    for prompt, images in groups.items():
+        result.append({
+            "prompt": prompt,
+            "generated_at": group_timestamps[prompt],
+            "images": images,
+        })
+    result.sort(key=lambda g: g["generated_at"], reverse=True)
+    return result
 
 
 def get_images_from_directory(directory: str, limit: int = 50) -> list[dict]:

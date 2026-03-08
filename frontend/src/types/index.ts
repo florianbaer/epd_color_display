@@ -29,6 +29,19 @@ export interface ImageInfo {
   size_bytes: number
 }
 
+export interface FeedImageInfo {
+  filename: string
+  url: string
+  created_at: string
+  size_bytes: number
+}
+
+export interface FeedGroup {
+  prompt: string
+  generated_at: string
+  images: FeedImageInfo[]
+}
+
 export interface ApiResponse<T> {
   data?: T
   error?: string

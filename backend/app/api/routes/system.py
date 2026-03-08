@@ -14,11 +14,14 @@ from ...models.schemas import (
     HealthResponse,
     ImageInfo,
     ImageGalleryResponse,
+    FeedImageInfo,
+    FeedGroup,
+    FeedResponse,
     SuccessResponse
 )
 from ...core.scheduler import scheduler
 from ...core.generator import display_existing_image
-from ...utils.image import get_images_from_directory
+from ...utils.image import get_images_from_directory, get_images_grouped_by_prompt
 from .generate import get_task_status, is_running, update_task_status
 
 logger = logging.getLogger(__name__)
@@ -62,6 +65,34 @@ async def get_images(limit: int = 50):
         ))
 
     return ImageGalleryResponse(images=images, total=len(images))
+
+
+@router.get("/gallery/feed", response_model=FeedResponse)
+async def get_gallery_feed(limit: int = 100):
+    """Get images grouped by prompt for feed display."""
+    settings = get_settings()
+    groups_data = get_images_grouped_by_prompt(settings.image_dir, limit=limit)
+
+    groups = []
+    total_images = 0
+    for g in groups_data:
+        images = [
+            FeedImageInfo(
+                filename=img["filename"],
+                url=f"/api/v1/images/{img['filename']}",
+                created_at=img["created_at"],
+                size_bytes=img["size_bytes"],
+            )
+            for img in g["images"]
+        ]
+        total_images += len(images)
+        groups.append(FeedGroup(
+            prompt=g["prompt"],
+            generated_at=g["generated_at"],
+            images=images,
+        ))
+
+    return FeedResponse(groups=groups, total_images=total_images)
 
 
 @router.get("/images/{filename}")

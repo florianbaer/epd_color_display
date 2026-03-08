@@ -7,7 +7,7 @@ import ImageModal from '../components/gallery/ImageModal.vue'
 const imageStore = useImageStore()
 
 onMounted(() => {
-  imageStore.loadImages()
+  imageStore.loadFeed()
 })
 </script>
 

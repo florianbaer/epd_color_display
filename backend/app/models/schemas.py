@@ -75,6 +75,27 @@ class ImageGalleryResponse(BaseModel):
     total: int
 
 
+class FeedImageInfo(BaseModel):
+    """Image info within a feed group (no prompt needed)."""
+    filename: str
+    url: str
+    created_at: str
+    size_bytes: int
+
+
+class FeedGroup(BaseModel):
+    """A group of images generated from the same prompt."""
+    prompt: str
+    generated_at: str
+    images: List[FeedImageInfo]
+
+
+class FeedResponse(BaseModel):
+    """Response model for gallery feed."""
+    groups: List[FeedGroup]
+    total_images: int
+
+
 class WebSocketMessage(BaseModel):
     """WebSocket message format."""
     type: str
