@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { useImageStore } from '../../stores/imageStore'
-import ImageCard from './ImageCard.vue'
-import type { ImageInfo } from '../../types'
+import FeedPost from './FeedPost.vue'
 
 const imageStore = useImageStore()
 
-function handleImageClick(image: ImageInfo) {
-  imageStore.selectImage(image)
-}
-
-defineExpose({ refresh: () => imageStore.loadImages() })
+defineExpose({ refresh: () => imageStore.loadFeed() })
 </script>
 
 <template>
@@ -18,17 +13,16 @@ defineExpose({ refresh: () => imageStore.loadImages() })
       Loading images...
     </div>
 
-    <div v-else-if="imageStore.images.length === 0" class="text-center py-10 text-gray-400">
+    <div v-else-if="imageStore.feedGroups.length === 0" class="text-center py-10 text-gray-400">
       <p>No images generated yet.</p>
       <p class="mt-2">Generate an image to see it here!</p>
     </div>
 
-    <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
-      <ImageCard
-        v-for="image in imageStore.images"
-        :key="image.filename"
-        :image="image"
-        @click="handleImageClick"
+    <div v-else class="flex flex-col gap-6 max-w-2xl mx-auto">
+      <FeedPost
+        v-for="(group, index) in imageStore.feedGroups"
+        :key="group.generated_at + '-' + index"
+        :group="group"
       />
     </div>
   </div>

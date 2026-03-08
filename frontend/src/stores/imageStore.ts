@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ImageInfo } from '../types'
+import type { ImageInfo, FeedGroup } from '../types'
 import * as api from '../services/api'
 import { useStatusStore } from './statusStore'
 
 export const useImageStore = defineStore('image', () => {
   const images = ref<ImageInfo[]>([])
+  const feedGroups = ref<FeedGroup[]>([])
   const selectedImage = ref<ImageInfo | null>(null)
   const displayingImage = ref(false)
   const loading = ref(false)
@@ -18,6 +19,18 @@ export const useImageStore = defineStore('image', () => {
       images.value = await api.getImages(limit)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load images'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadFeed(limit: number = 100) {
+    loading.value = true
+    error.value = null
+    try {
+      feedGroups.value = await api.getGalleryFeed(limit)
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to load feed'
     } finally {
       loading.value = false
     }
@@ -56,11 +69,13 @@ export const useImageStore = defineStore('image', () => {
 
   return {
     images,
+    feedGroups,
     selectedImage,
     displayingImage,
     loading,
     error,
     loadImages,
+    loadFeed,
     selectImage,
     closeModal,
     displayOnEpaper,
