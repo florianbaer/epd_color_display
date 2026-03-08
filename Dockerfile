@@ -1,13 +1,15 @@
+# syntax=docker/dockerfile:1
 # Dockerfile for EPD Color Display
 # Single container with backend serving built frontend
 
 # Build frontend
-FROM node:20-alpine AS frontend-build
+FROM oven/bun:1-alpine AS frontend-build
 WORKDIR /app
-COPY frontend/package.json ./
-RUN npm install
+COPY frontend/package.json frontend/bun.lock* ./
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 COPY frontend/ .
-RUN npm run build
+RUN bun run build
 
 # Backend
 FROM python:3.11-slim
@@ -24,10 +26,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/pyproject.toml .
 
 # Install dependencies
-RUN pip install --no-cache-dir .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install .
 
 # Install hardware dependencies (for Raspberry Pi deployment)
-RUN pip install --no-cache-dir gpiozero lgpio spidev || true
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install gpiozero lgpio spidev || true
 
 # Copy application code
 COPY backend/app/ ./app/
