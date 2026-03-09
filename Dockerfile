@@ -3,7 +3,7 @@
 # Single container with backend serving built frontend
 
 # Build frontend
-FROM oven/bun:1-alpine AS frontend-build
+FROM docker.io/oven/bun:1-alpine AS frontend-build
 WORKDIR /app
 COPY frontend/package.json frontend/bun.lock* ./
 RUN --mount=type=cache,target=/root/.bun/install/cache \
@@ -12,7 +12,7 @@ COPY frontend/ .
 RUN bun run build
 
 # Backend
-FROM python:3.11-slim
+FROM docker.io/python:3.11-slim
 
 WORKDIR /app
 
