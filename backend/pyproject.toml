@@ -16,6 +16,7 @@ dependencies = [
     # "gpiozero>=2.0.1",
     # "spidev>=3.8",
     "spidev>=3.8",
+    "gpiozero>=2.0.1",
 ]
 
 [project.optional-dependencies]
