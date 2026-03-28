@@ -28,8 +28,9 @@ from ...core.scheduler import scheduler
 from ...core.generator import display_existing_image
 from ...utils.image import (
     get_images_from_directory,
-    get_images_grouped_by_prompt,
+    get_feed_paginated,
     get_uploaded_images,
+    invalidate_feed_cache,
     prepare_image_for_display,
     save_image_with_timestamp,
     save_image_metadata,
@@ -121,14 +122,13 @@ async def get_images(limit: int = 50):
 
 
 @router.get("/gallery/feed", response_model=FeedResponse)
-async def get_gallery_feed(limit: int = 100):
-    """Get images grouped by prompt for feed display."""
+async def get_gallery_feed(limit: int = 10, offset: int = 0):
+    """Get feed entries paginated, each image as its own chronological entry."""
     settings = get_settings()
-    groups_data = get_images_grouped_by_prompt(settings.image_dir, limit=limit, exclude_uploads=True)
+    entries, has_more = get_feed_paginated(settings.image_dir, limit=limit, offset=offset)
 
     groups = []
-    total_images = 0
-    for g in groups_data:
+    for g in entries:
         images = [
             FeedImageInfo(
                 filename=img["filename"],
@@ -138,14 +138,13 @@ async def get_gallery_feed(limit: int = 100):
             )
             for img in g["images"]
         ]
-        total_images += len(images)
         groups.append(FeedGroup(
             prompt=g["prompt"],
             generated_at=g["generated_at"],
             images=images,
         ))
 
-    return FeedResponse(groups=groups, total_images=total_images)
+    return FeedResponse(groups=groups, total_images=len(groups), has_more=has_more)
 
 
 @router.get("/gallery/uploads", response_model=ImageGalleryResponse)
@@ -198,8 +197,16 @@ async def upload_image(
     )
     image_path = save_image_with_timestamp(prepared, settings.image_dir, prefix="upload")
     save_image_metadata(image_path, prompt=label.strip() or "Uploaded", model="upload")
+    invalidate_feed_cache()
 
     filename = Path(image_path).name
+
+    # Auto-display on EPD if nothing is already running
+    if not is_running():
+        thread = threading.Thread(target=run_display_image, args=(image_path,))
+        thread.daemon = True
+        thread.start()
+
     return UploadResponse(
         success=True,
         filename=filename,

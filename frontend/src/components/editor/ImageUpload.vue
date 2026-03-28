@@ -9,7 +9,6 @@ type FeedbackType = 'success' | 'error'
 const ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
 const MAX_SIZE = 20 * 1024 * 1024
 
-const label = ref('Uploaded')
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -46,10 +45,9 @@ async function handleUpload() {
     return
   }
 
-  const trimmedLabel = label.value.trim() || 'Uploaded'
-  const result = await imageStore.uploadImage(selectedFile.value, trimmedLabel)
+  const result = await imageStore.uploadImage(selectedFile.value, 'Uploaded')
   if (result.success) {
-    showFeedback('success', 'Uploaded!')
+    showFeedback('success', 'Uploaded & sending to display...')
     selectedFile.value = null
     if (previewUrl.value) {
       URL.revokeObjectURL(previewUrl.value)
@@ -68,16 +66,7 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex gap-3 items-end">
-      <div class="flex-1">
-        <label class="text-xs text-gray-500 mb-1 block">Label (groups images in gallery)</label>
-        <input
-          v-model="label"
-          type="text"
-          placeholder="e.g. My photos"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-        />
-      </div>
+    <div class="flex gap-3">
       <button
         class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
         @click="fileInputRef?.click()"
@@ -105,7 +94,7 @@ onUnmounted(() => {
         @click="handleUpload"
       >
         <span v-if="imageStore.uploading">Uploading...</span>
-        <span v-else>Upload to Gallery</span>
+        <span v-else>Upload &amp; Display</span>
       </button>
       <span
         v-if="feedback.show"

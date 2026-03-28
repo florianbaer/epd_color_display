@@ -9,6 +9,16 @@ type GalleryTab = 'feed' | 'uploads'
 
 const imageStore = useImageStore()
 const galleryTab = ref<GalleryTab>('feed')
+const scrollContainer = ref<HTMLElement | null>(null)
+
+function onScroll() {
+  const el = scrollContainer.value
+  if (!el || galleryTab.value !== 'feed') return
+  // Trigger load when within 300px of the bottom
+  if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
+    imageStore.loadMoreFeed()
+  }
+}
 
 function handleTabChange(tab: GalleryTab) {
   galleryTab.value = tab
@@ -48,8 +58,12 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Scrollable content: flex-1 + min-h-0 fills remaining height without overflow -->
-    <div class="flex-1 overflow-y-auto min-h-0">
+    <!-- Scrollable content — scroll event triggers pagination -->
+    <div
+      ref="scrollContainer"
+      class="flex-1 overflow-y-auto min-h-0"
+      @scroll.passive="onScroll"
+    >
       <ImageGallery v-if="galleryTab === 'feed'" />
       <UploadGallery v-else />
     </div>

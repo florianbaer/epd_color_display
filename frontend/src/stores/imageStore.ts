@@ -7,12 +7,17 @@ import { useStatusStore } from './statusStore'
 export const useImageStore = defineStore('image', () => {
   const images = ref<ImageInfo[]>([])
   const feedGroups = ref<FeedGroup[]>([])
+  const feedHasMore = ref(false)
+  const feedLoadingMore = ref(false)
+  const feedOffset = ref(0)
   const uploadedImages = ref<ImageInfo[]>([])
   const selectedImage = ref<ImageInfo | null>(null)
   const displayingImage = ref(false)
   const uploading = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  const FEED_PAGE_SIZE = 10
 
   async function loadImages(limit: number = 50) {
     loading.value = true
@@ -26,15 +31,38 @@ export const useImageStore = defineStore('image', () => {
     }
   }
 
-  async function loadFeed(limit: number = 100) {
+  async function loadFeed() {
     loading.value = true
     error.value = null
+    feedGroups.value = []
+    feedHasMore.value = false
+    feedOffset.value = 0
     try {
-      feedGroups.value = await api.getGalleryFeed(limit)
+      const result = await api.getGalleryFeed(FEED_PAGE_SIZE, 0)
+      feedGroups.value = result.groups
+      feedHasMore.value = result.has_more
+      feedOffset.value = result.groups.length
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load feed'
     } finally {
       loading.value = false
+    }
+  }
+
+  async function loadMoreFeed() {
+    if (!feedHasMore.value || feedLoadingMore.value) return
+    feedLoadingMore.value = true
+    // Snapshot offset at call time — prevents race if called concurrently
+    const offset = feedOffset.value
+    try {
+      const result = await api.getGalleryFeed(FEED_PAGE_SIZE, offset)
+      feedGroups.value.push(...result.groups)
+      feedOffset.value = offset + result.groups.length
+      feedHasMore.value = result.has_more
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to load more items'
+    } finally {
+      feedLoadingMore.value = false
     }
   }
 
@@ -55,10 +83,12 @@ export const useImageStore = defineStore('image', () => {
     error.value = null
     try {
       const result = await api.uploadImage(file, label)
+      // Backend auto-triggers EPD display — start polling so the UI shows progress
+      const statusStore = useStatusStore()
+      statusStore.startPolling()
       try {
         await loadUploads()
       } catch {
-        // Upload succeeded; list refresh is best-effort
         console.warn('Failed to refresh uploads list after successful upload')
       }
       return { success: true, message: result.message }
@@ -105,6 +135,9 @@ export const useImageStore = defineStore('image', () => {
   return {
     images,
     feedGroups,
+    feedHasMore,
+    feedLoadingMore,
+    feedOffset,
     uploadedImages,
     selectedImage,
     displayingImage,
@@ -113,6 +146,7 @@ export const useImageStore = defineStore('image', () => {
     error,
     loadImages,
     loadFeed,
+    loadMoreFeed,
     loadUploads,
     uploadImage,
     selectImage,

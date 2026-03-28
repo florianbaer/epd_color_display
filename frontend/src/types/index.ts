@@ -42,6 +42,12 @@ export interface FeedGroup {
   images: FeedImageInfo[]
 }
 
+export interface FeedResponse {
+  groups: FeedGroup[]
+  total_images: number
+  has_more: boolean
+}
+
 export interface ApiResponse<T> {
   data?: T
   error?: string

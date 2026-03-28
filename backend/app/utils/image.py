@@ -3,6 +3,7 @@
 import os
 import csv
 import json
+import time
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
@@ -236,6 +237,85 @@ def get_images_grouped_by_prompt(directory: str, limit: int = 100, exclude_uploa
         })
     result.sort(key=lambda g: g["generated_at"], reverse=True)
     return result
+
+
+_FEED_CACHE: dict = {"entries": [], "ts": 0.0, "directory": ""}
+_FEED_CACHE_TTL = 5.0  # seconds
+
+
+def _feed_sort_key(entry: tuple) -> str:
+    """Sort by metadata generated_at; fall back to filesystem mtime."""
+    stat, _, meta = entry
+    if meta and meta.get("generated_at"):
+        return meta["generated_at"]
+    return datetime.fromtimestamp(stat.st_mtime).isoformat()
+
+
+def _get_feed_entries(directory: str) -> list[tuple]:
+    """
+    Scan, filter (exclude uploads), and sort feed entries.
+    Results are cached for _FEED_CACHE_TTL seconds to avoid redundant I/O
+    on paginated requests.
+    """
+    now = time.monotonic()
+    if (
+        _FEED_CACHE["directory"] == directory
+        and now - _FEED_CACHE["ts"] < _FEED_CACHE_TTL
+    ):
+        return _FEED_CACHE["entries"]
+
+    dir_path = Path(directory)
+    if not dir_path.exists():
+        return []
+
+    entries: list[tuple[os.stat_result, Path, dict | None]] = []
+    for img_path in dir_path.glob("*.png"):
+        meta = read_image_metadata(str(img_path))
+        if meta and meta.get("model") == "upload":
+            continue
+        entries.append((img_path.stat(), img_path, meta))
+
+    entries.sort(key=_feed_sort_key, reverse=True)
+    _FEED_CACHE.update({"entries": entries, "ts": now, "directory": directory})
+    return entries
+
+
+def invalidate_feed_cache() -> None:
+    """Force the next feed request to re-scan the directory."""
+    _FEED_CACHE["ts"] = 0.0
+
+
+def get_feed_paginated(
+    directory: str,
+    limit: int = 10,
+    offset: int = 0,
+) -> tuple[list[dict], bool]:
+    """
+    Return images as individual feed entries sorted newest-first, with pagination.
+    Each entry has exactly one image — no grouping by prompt text.
+
+    Returns (entries, has_more).
+    """
+    entries = _get_feed_entries(directory)
+
+    has_more = offset + limit < len(entries)
+    page = entries[offset: offset + limit]
+
+    result = []
+    for stat, img_path, meta in page:
+        prompt = meta.get("prompt", "") if meta else ""
+        generated_at = _feed_sort_key((stat, img_path, meta))
+        result.append({
+            "prompt": prompt,
+            "generated_at": generated_at,
+            "images": [{
+                "filename": img_path.name,
+                "path": str(img_path.absolute()),
+                "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "size_bytes": stat.st_size,
+            }],
+        })
+    return result, has_more
 
 
 def get_uploaded_images(directory: str, limit: int = 100) -> list[dict]:

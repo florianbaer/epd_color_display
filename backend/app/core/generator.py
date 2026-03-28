@@ -5,7 +5,7 @@ from typing import Dict, Any, Callable, Optional
 from PIL import Image
 from ..hardware.epd import EPD
 from .gemini import GeminiImageGenerator
-from ..utils.image import save_image_with_timestamp, prepare_image_for_display, log_prompt_to_csv, save_image_metadata
+from ..utils.image import save_image_with_timestamp, prepare_image_for_display, log_prompt_to_csv, save_image_metadata, invalidate_feed_cache
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ def generate_and_display_image(
         update_status("Saving original image...")
         saved_path = save_image_with_timestamp(raw_image, directory=image_dir)
         save_image_metadata(saved_path, prompt, model)
+        invalidate_feed_cache()
         logger.info(f"Image saved to: {saved_path}")
 
         update_status("Preparing image for display...")

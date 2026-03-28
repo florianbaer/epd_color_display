@@ -8,6 +8,7 @@ import type {
   SchedulerStatus,
   ImageInfo,
   FeedGroup,
+  FeedResponse,
   SuccessResponse
 } from '../types'
 
@@ -68,11 +69,8 @@ export async function getImages(limit: number = 50): Promise<ImageInfo[]> {
   return data.images
 }
 
-export async function getGalleryFeed(limit: number = 100): Promise<FeedGroup[]> {
-  const data = await fetchJson<{ groups: FeedGroup[]; total_images: number }>(
-    `/gallery/feed?limit=${limit}`
-  )
-  return data.groups
+export async function getGalleryFeed(limit: number = 10, offset: number = 0): Promise<FeedResponse> {
+  return fetchJson<FeedResponse>(`/gallery/feed?limit=${limit}&offset=${offset}`)
 }
 
 export async function displayImage(filename: string): Promise<SuccessResponse> {

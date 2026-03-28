@@ -94,6 +94,7 @@ class FeedResponse(BaseModel):
     """Response model for gallery feed."""
     groups: List[FeedGroup]
     total_images: int
+    has_more: bool
 
 
 class WebSocketMessage(BaseModel):
