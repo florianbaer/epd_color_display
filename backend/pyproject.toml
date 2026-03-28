@@ -18,6 +18,7 @@ dependencies = [
     "spidev>=3.8",
     "gpiozero>=2.0.1",
     "lgpio>=0.2.2.0",
+    "python-multipart>=0.0.22",
 ]
 
 [project.optional-dependencies]
