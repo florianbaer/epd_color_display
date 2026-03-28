@@ -7,7 +7,6 @@ import type {
   GenerationStatus,
   SchedulerStatus,
   ImageInfo,
-  FeedGroup,
   FeedResponse,
   SuccessResponse
 } from '../types'
