@@ -80,3 +80,25 @@ export async function displayImage(filename: string): Promise<SuccessResponse> {
     method: 'POST',
   })
 }
+
+export async function uploadImage(
+  file: File,
+  label: string,
+): Promise<{ success: boolean; filename: string; url: string; message: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('label', label)
+  const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: form })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.detail || `HTTP ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function getUploads(limit: number = 100): Promise<ImageInfo[]> {
+  const data = await fetchJson<{ images: ImageInfo[]; total: number }>(
+    `/gallery/uploads?limit=${limit}`
+  )
+  return data.images
+}

@@ -7,6 +7,7 @@ import PromptEditor from '../components/editor/PromptEditor.vue'
 import PromptHistory from '../components/editor/PromptHistory.vue'
 import GenerateButton from '../components/status/GenerateButton.vue'
 import StatusDisplay from '../components/status/StatusDisplay.vue'
+import ImageUpload from '../components/editor/ImageUpload.vue'
 
 const promptStore = usePromptStore()
 const statusStore = useStatusStore()
@@ -107,6 +108,11 @@ onMounted(async () => {
         :prompts="promptStore.history"
         @select="handleSelectPrompt"
       />
+    </section>
+
+    <section class="p-8 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Upload Image</h2>
+      <ImageUpload />
     </section>
 
     <section class="p-8">

@@ -16,7 +16,7 @@ const activeTab = ref<TabType>('editor')
 function handleTabChange(tab: TabType) {
   activeTab.value = tab
   if (tab === 'gallery') {
-    imageStore.loadImages()
+    imageStore.loadFeed()
   }
 }
 
@@ -30,16 +30,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-primary p-5">
-    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
+  <div class="min-h-screen bg-gradient-primary p-5 flex items-start justify-center">
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl flex flex-col" style="max-height: calc(100vh - 2.5rem);">
       <AppHeader />
       <TabNavigation
         :active-tab="activeTab"
         @update:active-tab="handleTabChange"
       />
 
-      <EditorView v-if="activeTab === 'editor'" />
-      <GalleryView v-else-if="activeTab === 'gallery'" />
+      <EditorView v-if="activeTab === 'editor'" class="overflow-y-auto flex-1 min-h-0" />
+      <GalleryView v-else-if="activeTab === 'gallery'" class="flex-1 min-h-0" />
     </div>
   </div>
 </template>

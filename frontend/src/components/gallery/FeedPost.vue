@@ -26,52 +26,29 @@ function handleImageClick(img: FeedGroup['images'][number]) {
 </script>
 
 <template>
-  <article class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-    <!-- Post header -->
-    <div class="px-4 py-3 border-b border-gray-100">
-      <p class="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+  <article>
+    <!-- Sticky prompt header -->
+    <div class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3 shadow-sm">
+      <p class="text-sm font-medium text-gray-800 leading-relaxed whitespace-pre-line">
         {{ group.prompt || 'Prompt not recorded' }}
       </p>
-      <time class="text-xs text-gray-400 mt-1 block">{{ formatDate(group.generated_at) }}</time>
+      <time class="text-xs text-gray-400 mt-0.5 block">{{ formatDate(group.generated_at) }}</time>
     </div>
 
-    <!-- Images -->
+    <!-- Vertically stacked images -->
     <div
-      v-if="group.images.length === 1"
-      class="cursor-pointer"
-      @click="handleImageClick(group.images[0])"
+      v-for="img in group.images"
+      :key="img.filename"
+      class="w-full bg-black flex items-center justify-center cursor-pointer"
+      style="max-height: 80vh;"
+      @click="handleImageClick(img)"
     >
       <img
-        :src="group.images[0].url"
-        :alt="group.images[0].filename"
+        :src="img.url"
+        :alt="img.filename"
         loading="lazy"
-        class="w-full block"
+        style="width: 100%; max-height: 80vh; object-fit: contain; display: block;"
       />
-    </div>
-
-    <div
-      v-else
-      class="flex overflow-x-auto gap-1 snap-x snap-mandatory"
-    >
-      <div
-        v-for="img in group.images"
-        :key="img.filename"
-        class="flex-shrink-0 snap-start cursor-pointer"
-        :style="{ width: group.images.length === 2 ? '50%' : '80%' }"
-        @click="handleImageClick(img)"
-      >
-        <img
-          :src="img.url"
-          :alt="img.filename"
-          loading="lazy"
-          class="w-full block"
-        />
-      </div>
-    </div>
-
-    <!-- Footer with image count -->
-    <div v-if="group.images.length > 1" class="px-4 py-2 text-xs text-gray-400 border-t border-gray-100">
-      {{ group.images.length }} images
     </div>
   </article>
 </template>

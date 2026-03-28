@@ -185,7 +185,7 @@ def read_image_metadata(image_path: str) -> dict | None:
         return None
 
 
-def get_images_grouped_by_prompt(directory: str, limit: int = 100) -> list[dict]:
+def get_images_grouped_by_prompt(directory: str, limit: int = 100, exclude_uploads: bool = True) -> list[dict]:
     """
     Scan PNGs, read sidecars, group by prompt text.
 
@@ -206,6 +206,10 @@ def get_images_grouped_by_prompt(directory: str, limit: int = 100) -> list[dict]
     for img_path in png_files:
         stat = img_path.stat()
         meta = read_image_metadata(str(img_path))
+
+        if exclude_uploads and meta and meta.get("model") == "upload":
+            continue
+
         prompt = meta["prompt"] if meta and meta.get("prompt") else ""
         generated_at = meta.get("generated_at", "") if meta else ""
 
@@ -232,6 +236,36 @@ def get_images_grouped_by_prompt(directory: str, limit: int = 100) -> list[dict]
         })
     result.sort(key=lambda g: g["generated_at"], reverse=True)
     return result
+
+
+def get_uploaded_images(directory: str, limit: int = 100) -> list[dict]:
+    """
+    Return images whose JSON sidecar has model == "upload", sorted newest-first.
+    Filters before sorting so stat() is only called once per matched file.
+    """
+    dir_path = Path(directory)
+    if not dir_path.exists():
+        return []
+
+    # Filter first (cheap metadata read), cache stat to avoid double syscall
+    candidates: list[tuple[os.stat_result, Path]] = []
+    for img_path in dir_path.glob("*.png"):
+        meta = read_image_metadata(str(img_path))
+        if not meta or meta.get("model") != "upload":
+            continue
+        candidates.append((img_path.stat(), img_path))
+
+    candidates.sort(key=lambda x: x[0].st_mtime, reverse=True)
+
+    return [
+        {
+            "filename": img_path.name,
+            "path": str(img_path.absolute()),
+            "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            "size_bytes": stat.st_size,
+        }
+        for stat, img_path in candidates[:limit]
+    ]
 
 
 def get_images_from_directory(directory: str, limit: int = 50) -> list[dict]:

@@ -7,8 +7,10 @@ import { useStatusStore } from './statusStore'
 export const useImageStore = defineStore('image', () => {
   const images = ref<ImageInfo[]>([])
   const feedGroups = ref<FeedGroup[]>([])
+  const uploadedImages = ref<ImageInfo[]>([])
   const selectedImage = ref<ImageInfo | null>(null)
   const displayingImage = ref(false)
+  const uploading = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -33,6 +35,39 @@ export const useImageStore = defineStore('image', () => {
       error.value = e instanceof Error ? e.message : 'Failed to load feed'
     } finally {
       loading.value = false
+    }
+  }
+
+  async function loadUploads(limit: number = 100) {
+    loading.value = true
+    error.value = null
+    try {
+      uploadedImages.value = await api.getUploads(limit)
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to load uploads'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function uploadImage(file: File, label: string): Promise<{ success: boolean; message: string }> {
+    uploading.value = true
+    error.value = null
+    try {
+      const result = await api.uploadImage(file, label)
+      try {
+        await loadUploads()
+      } catch {
+        // Upload succeeded; list refresh is best-effort
+        console.warn('Failed to refresh uploads list after successful upload')
+      }
+      return { success: true, message: result.message }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Upload failed'
+      error.value = message
+      return { success: false, message }
+    } finally {
+      uploading.value = false
     }
   }
 
@@ -70,12 +105,16 @@ export const useImageStore = defineStore('image', () => {
   return {
     images,
     feedGroups,
+    uploadedImages,
     selectedImage,
     displayingImage,
+    uploading,
     loading,
     error,
     loadImages,
     loadFeed,
+    loadUploads,
+    uploadImage,
     selectImage,
     closeModal,
     displayOnEpaper,

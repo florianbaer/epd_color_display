@@ -18,7 +18,7 @@ defineExpose({ refresh: () => imageStore.loadFeed() })
       <p class="mt-2">Generate an image to see it here!</p>
     </div>
 
-    <div v-else class="flex flex-col gap-6 max-w-2xl mx-auto">
+    <div v-else class="flex flex-col">
       <FeedPost
         v-for="(group, index) in imageStore.feedGroups"
         :key="group.generated_at + '-' + index"

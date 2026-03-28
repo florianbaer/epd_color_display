@@ -100,3 +100,11 @@ class WebSocketMessage(BaseModel):
     """WebSocket message format."""
     type: str
     data: Optional[dict] = None
+
+
+class UploadResponse(BaseModel):
+    """Response after a successful image upload."""
+    success: bool
+    filename: str
+    url: str
+    message: str
