@@ -1,2 +1,1 @@
-Modern flat vector illustration of a happy cute fat fluffy sparrow with a pommes in his mouth surfboarding in Hawaii in kawaii/chibi style.
-Style: Minimalist geometric shapes, clean lines, solid matte colors, 2D aesthetic.
+A sweet image two hot air baloons in cartoon style, flying over the far sea. Positive vibes.
